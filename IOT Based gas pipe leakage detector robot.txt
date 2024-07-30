@@ -1,0 +1,100 @@
+void setup()
+{
+pinMode(8,OUTPUT); 
+pinMode(9,OUTPUT);
+pinMode(10,OUTPUT);
+pinMode(11,OUTPUT); /* 4 output pins for 2 Motors*/ 
+pinMode(6,INPUT); 
+pinMode(7,INPUT); /* 2 input pins for 2 IR sensors*/
+}
+
+void loop()
+{ 
+int x = digitalRead(6); /* Storing state of IR 1 at pin 6 in a variable ‘x’*/ 
+int y = digitalRead(7); /* Storing state of IR 1 at pin 7 in a variable ‘y’*/ 
+int sensorValue = analogRead(A0); 
+if((x==HIGH && y == HIGH) || sensorValue> 500 ) /* If both IR are high, only this condition will be executed*/
+{
+digitalWrite(10,LOW); digitalWrite(8,LOW); digitalWrite(11,LOW);
+digitalWrite(9,LOW); /* all terminals are low, stopping both motors*/ }
+Else
+{ /* if both IRs are not high then these conditionswill be checked and executed*/ if (x==HIGH) /* if IR 1 is high*/
+{
+digitalWrite(10,LOW); digitalWrite(11,HIGH);
+delay(1);
+digitalWrite(11,LOW); /* Motor 1 rotating in forward direction*/
+delay(1); /* Delays can be modified to manipulate the speed of motor*/ }
+if (x==LOW) /* if IR 2 is low*/
+{
+digitalWrite(10,HIGH);
+delay(1);
+digitalWrite(10,LOW); /* Motor 1 rotating in reverse direction*/ delay(1);
+/* Delays can be modified to manipulate the speed of motor*/ digitalWrite(11,LOW);
+}
+if (y==HIGH) /* if IR 2 is high*/
+{
+digitalWrite(8,LOW); digitalWrite(9,HIGH);
+delay(1);
+digitalWrite(9,LOW); /* Motor 2 rotating in forward direction*/
+.
+35
+IOT Based Gas Pipe Leakage Detector
+delay(1); /* Delays can be modified to manipulate thespeed of the motor*/ }
+if (y==LOW ) /* if IR 2 is low*/
+{
+digitalWrite(8,HIGH);
+delay(1);
+digitalWrite(8,LOW); /* Motor 2 rotating in reverse direction */
+delay(1); /* Delays can be modified to manipulate thespeed of the motor*/ digitalWrite(9,LOW);
+}
+}
+}
+Wifi Module Nodemcu (ESP8266)
+#include <SPI.h>
+#include <RFID.h>
+#define SS_PIN D8
+#define RST_PIN D0
+#define stopSignal D1
+#include <ESP8266WiFi.h>;
+#include <WiFiClient.h>;
+#include <ThingSpeak.h>;
+const char* ssid = "Redmi"; //Your Network SSID const char* password = "abcd1234"; //Your Network Password float inp; int val;
+int GASpin = A0; //LDR Pin Connected at A0 Pin WiFiClient client; unsigned long myChannelNumber = 1661719; //Your Channel Number (Without Brackets) const char * myWriteAPIKey = "Z1RSYAYJAHUABSL9"; //Your Write API Key
+RFID rfid(SS_PIN, RST_PIN); String rfidCard;
+int last_checkPoint = 0;
+void setup()
+{
+Serial.begin(9600);
+Serial.println("Starting the RFID Reader...");
+SPI.begin(); rfid.init();
+pinMode(stopSignal, OUTPUT);
+WiFi.begin(ssid, password);// Connect to WiFi network
+ThingSpeak.begin(client);
+}
+.
+36
+IOT Based Gas Pipe Leakage Detector
+void loop()
+{ rfidCard = ""; if (rfid.isCard())
+{
+if (rfid.readCardSerial())
+{
+rfidCard = String(rfid.serNum[0]) + " " + String(rfid.serNum[1]) + " " + String(rfid.serNum[2]) + " " + String(rfid.serNum[3]); Serial.println(rfidCard); int checkPoint = 0;
+if (rfidCard == "136 4 135 174" ){
+checkPoint = 1;
+}
+else if (rfidCard == "136 4 127 174" ){
+checkPoint = 2;
+} else {
+checkPoint = 0;
+}
+Serial.println(checkPoint); if(checkPoint)
+{
+digitalWrite(stopSignal, HIGH); delay(1000); inp = analogRead(GASpin);
+val = inp*(5000/1024);
+Serial.print(val); //Print on Serial Monitor delay(1000);
+ThingSpeak.writeField(myChannelNumber, checkPoint,val, myWriteAPIKey); //Update in
+ThingSpeak delay(4000);
+digitalWrite(stopSignal, LOW); delay(1000);
+}
+} rfid.halt(); }
